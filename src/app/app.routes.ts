@@ -3,6 +3,7 @@ import { LoginComponent } from './components/auth/login/login.component';
 import { RegisterComponent } from './components/auth/register/register.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { AttendanceComponent } from './components/attendance/attendance.component';
+import { MarkAttendanceComponent } from './components/mark-attendance/mark-attendance.component'; // ADD THIS IMPORT
 import { FeedbackComponent } from './components/feedback/feedback.component';
 import { QuizListComponent } from './components/quiz/quiz.component';
 import { QuizTakeComponent } from './components/quiz-take/quiz-take.component';
@@ -45,10 +46,10 @@ export const routes: Routes = [
     data: { role: UserRole.STUDENT }
   },
   
-  // Specific nested routes
+  // Specific nested routes - FIXED: Use MarkAttendanceComponent
   {
     path: 'attendance/mark',
-    component: AttendanceComponent,
+    component: MarkAttendanceComponent, // CHANGED: was AttendanceComponent
     canActivate: [AuthGuard, RoleGuard],
     data: { role: UserRole.TEACHER }
   },
@@ -68,7 +69,7 @@ export const routes: Routes = [
   },
   {
     path: 'attendance',
-    component: AttendanceComponent,
+    component: AttendanceComponent, // This stays the same - for viewing attendance
     canActivate: [AuthGuard]
   },
   {
@@ -81,7 +82,6 @@ export const routes: Routes = [
   {
     path: 'unauthorized',
     component: UnauthorizedComponent,
-   
   },
   
   // Catch-all route
