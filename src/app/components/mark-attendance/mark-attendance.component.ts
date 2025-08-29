@@ -11,7 +11,7 @@ import { AttendanceStats } from '../../models/attendance-stats';
 import { Router, RouterModule } from '@angular/router'; // Add this import
 
 @Component({
-  selector: 'app-attendance',
+  selector: 'app-mark-attendance',
   standalone: true, // Add standalone: true
   imports: [NavbarComponent, CommonModule, FormsModule, RouterModule], // Add RouterModule
   template: `
@@ -206,7 +206,7 @@ import { Router, RouterModule } from '@angular/router'; // Add this import
     </div>
   `
 })
-export class AttendanceComponent implements OnInit {
+export class MarkAttendanceComponent implements OnInit {
   attendanceRecords: Attendance[] = [];
   teacherAttendanceRecords: Attendance[] = [];
   attendanceStats: AttendanceStats | null = null;
