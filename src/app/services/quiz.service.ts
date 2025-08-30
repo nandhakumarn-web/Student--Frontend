@@ -16,7 +16,7 @@ export interface ApiResponse<T> {
   providedIn: 'root'
 })
 export class QuizService {
-  private apiUrl = 'http://localhost:8080/api'; // Update with your API URL
+  private apiUrl = 'http://localhost:8080/api/quiz'; // Update with your API URL
 
   constructor(private http: HttpClient) {}
 
