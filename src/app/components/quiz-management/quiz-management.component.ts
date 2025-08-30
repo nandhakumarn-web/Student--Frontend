@@ -92,6 +92,8 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
                             class="btn btn-outline-primary"
                             (click)="editQuiz(quiz)"
                             title="Edit Quiz"
+                            data-bs-toggle="modal"
+                            data-bs-target="#editQuizModal"
                           >
                             <i class="fas fa-edit"></i>
                           </button>
@@ -99,7 +101,9 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
                             class="btn btn-outline-secondary"
                             (click)="toggleQuizStatus(quiz)"
                             title="Toggle Status"
+                            [disabled]="isUpdatingStatus"
                           >
+                            <span *ngIf="isUpdatingStatus && selectedQuiz?.id === quiz.id" class="spinner-border spinner-border-sm me-1"></span>
                             <i class="fas" [class.fa-play]="!quiz.isActive" [class.fa-pause]="quiz.isActive"></i>
                           </button>
                         </div>
@@ -375,6 +379,131 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
         </div>
       </div>
     </div>
+
+    <!-- Edit Quiz Modal -->
+    <div class="modal fade" id="editQuizModal" tabindex="-1" data-bs-backdrop="static">
+      <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Edit Quiz</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <form [formGroup]="editQuizForm" (ngSubmit)="updateQuiz()">
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+              <!-- Basic Quiz Info -->
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <label for="editTitle" class="form-label">Quiz Title</label>
+                  <input
+                    type="text"
+                    class="form-control"
+                    id="editTitle"
+                    formControlName="title"
+                    [class.is-invalid]="editQuizForm.get('title')?.invalid && editQuizForm.get('title')?.touched"
+                  >
+                  <div class="invalid-feedback">Title is required.</div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label for="editDuration" class="form-label">Duration (minutes)</label>
+                  <input
+                    type="number"
+                    class="form-control"
+                    id="editDuration"
+                    formControlName="duration"
+                    min="1"
+                    [class.is-invalid]="editQuizForm.get('duration')?.invalid && editQuizForm.get('duration')?.touched"
+                  >
+                  <div class="invalid-feedback">Duration must be at least 1 minute.</div>
+                </div>
+              </div>
+
+              <div class="row mb-4">
+                <div class="col-12">
+                  <label for="editDescription" class="form-label">Description</label>
+                  <textarea
+                    class="form-control"
+                    id="editDescription"
+                    rows="3"
+                    formControlName="description"
+                  ></textarea>
+                </div>
+              </div>
+
+              <div class="row mb-4">
+                <div class="col-md-6">
+                  <label for="editStartTime" class="form-label">Start Time</label>
+                  <input
+                    type="datetime-local"
+                    class="form-control"
+                    id="editStartTime"
+                    formControlName="startTime"
+                    [class.is-invalid]="editQuizForm.get('startTime')?.invalid && editQuizForm.get('startTime')?.touched"
+                  >
+                  <div class="invalid-feedback">Start time is required.</div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label for="editEndTime" class="form-label">End Time</label>
+                  <input
+                    type="datetime-local"
+                    class="form-control"
+                    id="editEndTime"
+                    formControlName="endTime"
+                    [class.is-invalid]="editQuizForm.get('endTime')?.invalid && editQuizForm.get('endTime')?.touched"
+                  >
+                  <div class="invalid-feedback">End time is required.</div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button 
+                type="submit" 
+                class="btn btn-primary"
+                [disabled]="editQuizForm.invalid || isUpdating"
+              >
+                <span *ngIf="isUpdating" class="spinner-border spinner-border-sm me-2"></span>
+                {{ isUpdating ? 'Updating...' : 'Update Quiz' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Status Toggle Confirmation Modal -->
+    <div class="modal fade" id="statusToggleModal" tabindex="-1">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">{{ selectedQuiz?.isActive ? 'Deactivate' : 'Activate' }} Quiz</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <p>Are you sure you want to {{ selectedQuiz?.isActive ? 'deactivate' : 'activate' }} the quiz "{{ selectedQuiz?.title }}"?</p>
+            <div class="alert alert-warning" *ngIf="selectedQuiz?.isActive">
+              <strong>Warning:</strong> Deactivating this quiz will prevent students from taking it.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button 
+              type="button" 
+              class="btn" 
+              [ngClass]="selectedQuiz?.isActive ? 'btn-warning' : 'btn-success'"
+              (click)="confirmToggleStatus()" 
+              data-bs-dismiss="modal"
+              [disabled]="isUpdatingStatus"
+            >
+              <span *ngIf="isUpdatingStatus" class="spinner-border spinner-border-sm me-2"></span>
+              {{ selectedQuiz?.isActive ? 'Deactivate' : 'Activate' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   `,
   styles: [`
     .progress {
@@ -397,10 +526,14 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 })
 export class QuizManagementComponent implements OnInit {
   quizForm: FormGroup;
+  editQuizForm: FormGroup;
   myQuizzes: Quiz[] = [];
   selectedQuizResults: QuizAttempt[] = [];
+  selectedQuiz: Quiz | null = null;
   selectedQuizTitle = '';
   isCreating = false;
+  isUpdating = false;
+  isUpdatingStatus = false;
   String = String;
 
   constructor(
@@ -410,6 +543,7 @@ export class QuizManagementComponent implements OnInit {
     private router: Router
   ) {
     this.quizForm = this.createQuizForm();
+    this.editQuizForm = this.createEditQuizForm();
   }
 
   ngOnInit(): void {
@@ -425,6 +559,17 @@ export class QuizManagementComponent implements OnInit {
       duration: ['', [Validators.required, Validators.min(1)]],
       totalMarks: [0],
       questions: this.fb.array([this.createQuestionForm()])
+    });
+  }
+
+  createEditQuizForm(): FormGroup {
+    return this.fb.group({
+      id: [''],
+      title: ['', Validators.required],
+      description: [''],
+      startTime: ['', Validators.required],
+      endTime: ['', Validators.required],
+      duration: ['', [Validators.required, Validators.min(1)]]
     });
   }
 
@@ -510,20 +655,97 @@ export class QuizManagementComponent implements OnInit {
           if (response.success) {
             this.quizForm = this.createQuizForm();
             this.loadMyQuizzes();
-            // Close modal
-            const modal = document.getElementById('createQuizModal');
-            if (modal) {
-              const bsModal = new (window as any).bootstrap.Modal(modal);
-              bsModal.hide();
-            }
+            // Close modal using Bootstrap 5 method
+            this.closeModal('createQuizModal');
+            // Show success message (you can add a toast service)
+            alert('Quiz created successfully!');
           }
         },
         error: (error) => {
           this.isCreating = false;
           console.error('Error creating quiz:', error);
+          alert('Error creating quiz. Please try again.');
         }
       });
     }
+  }
+
+  editQuiz(quiz: Quiz): void {
+    this.selectedQuiz = quiz;
+    
+    // Format dates for datetime-local input
+    const startTime = new Date(quiz.startTime).toISOString().slice(0, 16);
+    const endTime = new Date(quiz.endTime).toISOString().slice(0, 16);
+    
+    this.editQuizForm.patchValue({
+      id: quiz.id,
+      title: quiz.title,
+      description: quiz.description,
+      duration: quiz.duration,
+      startTime: startTime,
+      endTime: endTime
+    });
+  }
+
+  updateQuiz(): void {
+    if (this.editQuizForm.valid && this.selectedQuiz) {
+      const currentUser = this.authService.getCurrentUser();
+      if (!currentUser) return;
+
+      this.isUpdating = true;
+      const quizData = this.editQuizForm.value;
+
+      this.quizService.updateQuiz(this.selectedQuiz.id, quizData).subscribe({
+        next: (response) => {
+          this.isUpdating = false;
+          if (response.success) {
+            this.loadMyQuizzes();
+            this.closeModal('editQuizModal');
+            alert('Quiz updated successfully!');
+          }
+        },
+        error: (error) => {
+          this.isUpdating = false;
+          console.error('Error updating quiz:', error);
+          alert('Error updating quiz. Please try again.');
+        }
+      });
+    }
+  }
+
+  toggleQuizStatus(quiz: Quiz): void {
+    this.selectedQuiz = quiz;
+    // Show confirmation modal
+    this.openModal('statusToggleModal');
+  }
+
+  confirmToggleStatus(): void {
+    if (!this.selectedQuiz) return;
+
+    const currentUser = this.authService.getCurrentUser();
+    if (!currentUser) return;
+
+    this.isUpdatingStatus = true;
+    const newStatus = !this.selectedQuiz.isActive;
+
+    this.quizService.updateQuizStatus(this.selectedQuiz.id, newStatus).subscribe({
+      next: (response) => {
+        this.isUpdatingStatus = false;
+        if (response.success) {
+          // Update the quiz in the local array
+          const quizIndex = this.myQuizzes.findIndex(q => q.id === this.selectedQuiz!.id);
+          if (quizIndex !== -1) {
+            this.myQuizzes[quizIndex].isActive = newStatus;
+          }
+          alert(`Quiz ${newStatus ? 'activated' : 'deactivated'} successfully!`);
+        }
+      },
+      error: (error) => {
+        this.isUpdatingStatus = false;
+        console.error('Error updating quiz status:', error);
+        alert('Error updating quiz status. Please try again.');
+      }
+    });
   }
 
   viewQuizResults(quiz: Quiz): void {
@@ -538,14 +760,23 @@ export class QuizManagementComponent implements OnInit {
     });
   }
 
-  editQuiz(quiz: Quiz): void {
-    // Navigate to edit page or open edit modal
-    console.log('Edit quiz:', quiz);
+  // Utility methods for modal handling
+  private openModal(modalId: string): void {
+    const modalElement = document.getElementById(modalId);
+    if (modalElement) {
+      const modal = new (window as any).bootstrap.Modal(modalElement);
+      modal.show();
+    }
   }
 
-  toggleQuizStatus(quiz: Quiz): void {
-    // Toggle quiz active status
-    console.log('Toggle quiz status:', quiz);
+  private closeModal(modalId: string): void {
+    const modalElement = document.getElementById(modalId);
+    if (modalElement) {
+      const modal = (window as any).bootstrap.Modal.getInstance(modalElement);
+      if (modal) {
+        modal.hide();
+      }
+    }
   }
 
   getTotalMarks(result: QuizAttempt): number {
